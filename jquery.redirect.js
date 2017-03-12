@@ -19,6 +19,40 @@ ShareAlike - If you remix, transform, or build upon the material, you must distr
 (function ($) {
     'use strict';
 
+    var methods = ["GET", "POST", "PUT", "DELETE"];
+
+    var getSelectedMethod = function(method) {
+        return (method && methods.indexOf(method.toUpperCase()) !== -1) ? method.toUpperCase() : 'POST';
+    };
+
+    var redirectStrategy = function(form, url, method, target, hash, submit) {
+        if(method === "GET") {
+            return getMethodRedirect(url, form, target, hash);
+        }
+        return formRedirect(form, submit);
+    };
+
+    var getMethodRedirect =function(url, form, target, hash) {
+        return {
+            go: function() {
+                var urlRedirect = url + "?" + $(form[0]).serialize().replace("+", "%20") + hash;
+                if(target==="_blank") {
+                    window.open(urlRedirect);
+                } else {
+                    window.location.replace(urlRedirect);
+                }
+            }
+        };
+    };
+
+    var formRedirect = function(form, submit) {
+        return {
+            go: function() {
+                $('body').append(form);
+                form[0][submit]()
+            }
+        };
+    };
     /**
      * jQuery Redirect
      * @param {string} url - Url of the redirection
@@ -27,10 +61,9 @@ ShareAlike - If you remix, transform, or build upon the material, you must distr
      * @param {string} target - (optional) The target of the form. "_blank" will open the url in a new window.
      * @param {boolean} traditional - (optional) This provides the same function as jquery's ajax function. The brackets are omitted on the field name if its an array.  This allows arrays to work with MVC.net among others.
      */
-    $.redirect = function (url, values, method, target, traditional) {
-        method = (method && ["GET", "POST", "PUT", "DELETE"].indexOf(method.toUpperCase()) !== -1) ? method.toUpperCase() : 'POST';
+    $.redirect = function(url, values, method, target, traditional) {
+        method = getSelectedMethod(method);
 
-        
         url = url.split("#");
         var hash = url[1] ? ("#" + url[1]) : "";
         url = url[0];
@@ -53,9 +86,9 @@ ShareAlike - If you remix, transform, or build upon the material, you must distr
         var submit = {}; //Create a symbol
         form[0][submit] = form[0].submit;
         iterateValues(values, [], form, null, traditional);
-        $('body').append(form);
-        form[0][submit]();
+        redirectStrategy(form, url, method, target, hash, submit).go();
     };
+
 
     //Utility Functions
     /**
